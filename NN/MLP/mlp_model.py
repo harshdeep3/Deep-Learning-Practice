@@ -26,7 +26,7 @@ class NeuralNetwork(nn.Module):
 
 def create_dataloader(batch_size: int = 64):
     # Download training data from open datasets.
-    training_data = datasets.FashionMNIST(
+    training_data = datasets.MNIST(
     root="data",
     train=True,
     download=True,
@@ -34,7 +34,7 @@ def create_dataloader(batch_size: int = 64):
     )
 
     # Download test data from open datasets.
-    test_data = datasets.FashionMNIST(
+    test_data = datasets.MNIST(
         root="data",
         train=False,
         download=True,

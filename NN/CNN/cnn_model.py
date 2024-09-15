@@ -39,7 +39,7 @@ class CNN(nn.Module):
     #flatten the output of conv2 to (batch_size, 32*7*7)
     x = x.view(x.size(0), -1)
     output = self.out(x)
-    return output, x # return x to visualise
+    return output # return x to visualise
 
 
 def create_dataloader(batch_size: int = 64):
@@ -149,7 +149,7 @@ def test(dataloader, model, loss_fn):
         for X, y in dataloader:
             X, y = X.to(device), y.to(device)
             pred = model(X)
-            test_loss += loss_fn(pred, y).item()
+            test_loss += loss_fn(pred, y)
             correct += (pred.argmax(1) == y).type(torch.float).sum().item()
     test_loss /= num_batches
     correct /= size
@@ -177,7 +177,7 @@ if __name__ == "__main__":
     # show_multiple_images(train_dl)
     
     # cnn model
-    cnn = CNN()
+    cnn = CNN().to(device)
     
     # num of epochs
     epochs = 10

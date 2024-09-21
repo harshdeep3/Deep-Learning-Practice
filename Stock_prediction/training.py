@@ -3,10 +3,11 @@ import torch
 from torch import nn
 
 from MT5_Link import MT5Class
-from basic_nn_model import NeuralNetwork
+from Stock_prediction.models.basic_nn_model import NeuralNetwork
+from Stock_prediction.models.lstm_model import LSTM
 
 from torch.utils.data import DataLoader
-from Stock_prediction.datasets.stockDataset import StockDataset
+from Stock_prediction.datasets.lstmStockDataset import StockDataset
 
 
 def train_one_epoch(dataloader, model, loss_fn, optimiser):
@@ -100,6 +101,7 @@ if __name__ == '__main__':
 
     # create model and move to device (cuda or cpu)
     nn_model = NeuralNetwork().to(device)
+    lstm_model = LSTM(input_dim=7, output_dim=7, hidden_dim=32, num_layers=1).to(device)
 
     # set loss function and optimiser
     loss_fn = nn.CrossEntropyLoss()
@@ -113,6 +115,6 @@ if __name__ == '__main__':
     train_dl, test_dl = create_dataloader('USDJPY', 32, batch_size)
 
     # training
-    train(epochs=epochs, dataloader=train_dl, model=nn_model, loss_fn=loss_fn, optimiser=optimiser)
+    train(epochs=epochs, dataloader=train_dl, model=lstm_model, loss_fn=loss_fn, optimiser=optimiser)
 
     # test(dataloader=train_dl, model=nn_model, loss_fn=loss_fn)

@@ -1,10 +1,6 @@
 
-from torchvision import datasets
-from torchvision.transforms import ToTensor
 
 import MetaTrader5 as mt5
-import pandas as pd
-from datetime import datetime
 import pytz
 from Stock_prediction.MT5_Link import get_historic_data
 from torch.utils.data import Dataset
@@ -12,7 +8,7 @@ from torch.utils.data import Dataset
 
 class StockDataset(Dataset):
 
-    def __init__(self, symbol :str,, is_training: bool):
+    def __init__(self, symbol :str, is_training: bool):
         # metatrader info
         # timeframe objects https://www.mql5.com/en/docs/python_metatrader5/mt5copyratesfrom_py
         self.inputs = None
@@ -45,7 +41,6 @@ class StockDataset(Dataset):
         testing_data_raw = testing_data.to_numpy()
 
         if is_training:
-
             self.inputs = training_data_raw
             self.targets = training_data_raw
         else:

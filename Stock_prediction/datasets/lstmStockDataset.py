@@ -81,6 +81,6 @@ class StockDataset(Dataset):
     def __getitem__(self, idx):
 
         inputs = self.inputs[idx]
-        target = self.target[idx]
+        target = self.targets[idx]
         
         return inputs, target

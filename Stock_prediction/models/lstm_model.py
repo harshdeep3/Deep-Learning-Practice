@@ -4,8 +4,15 @@ from torch import nn
 
 # Here we define our model as a class
 class LSTM(nn.Module):
-    def __init__(self, input_dim, hidden_dim, num_layers, output_dim):
+    def __init__(self, input_dim, hidden_dim, num_layers, output_dim, device):
         super(LSTM, self).__init__()
+
+        # device
+        self.device = device
+
+        # output dim
+        self.output_dim = output_dim
+
         # Hidden dimensions
         self.hidden_dim = hidden_dim
 
@@ -21,10 +28,10 @@ class LSTM(nn.Module):
 
     def forward(self, x):
         # Initialize hidden state with zeros
-        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).requires_grad_()
+        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).requires_grad_().to(self.device)
 
         # Initialize cell state
-        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).requires_grad_()
+        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_dim).requires_grad_().to(self.device)
 
         # We need to detach as we are doing truncated backpropagation through time (BPTT)
         # If we don't, we'll backprop all the way to the start even after going through another batch
@@ -33,4 +40,7 @@ class LSTM(nn.Module):
         # Index hidden state of last time step
         out = self.fc(out[:, -1, :])
 
-        return out
+        return out.view(self.output_dim)
+
+if __name__ == '__main__':
+    print("Lstm model file should not be run")

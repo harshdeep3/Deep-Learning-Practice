@@ -1,13 +1,13 @@
-
+import numpy as np
 import torch
+from networkx.utils.backends import backends
 from torch import nn
 
 from MT5_Link import MT5Class
 from Stock_prediction.models.basic_nn_model import NeuralNetwork
 from Stock_prediction.models.lstm_model import LSTM
 
-from torch.utils.data import DataLoader
-from Stock_prediction.datasets.lstmStockDataset import StockDataset
+from Stock_prediction.dataHandling import create_dataloader
 
 
 def train_one_epoch(dataloader, model, loss_fn, optimiser):
@@ -20,13 +20,13 @@ def train_one_epoch(dataloader, model, loss_fn, optimiser):
         optimiser (_type_): _description_
     """
 
-    size = len(dataloader.dataset)
     model.train()
+    batch_loss = []
     for batch, (X, y) in enumerate(dataloader):
-        X, y = X.to(device), y.to(device)
-
+        # moving to device and changing to
+        X, y = X.type(torch.float32).to(device), y.type(torch.float32).to(device)
         # Compute prediction error
-        pred = model(X)
+        pred = torch.unsqueeze(model(X), 0)
         loss = loss_fn(pred, y)
 
         # Backpropagation
@@ -34,9 +34,10 @@ def train_one_epoch(dataloader, model, loss_fn, optimiser):
         optimiser.step()
         optimiser.zero_grad()
 
-        if batch % 100 == 0:
-            loss, current = loss.item(), (batch + 1) * len(X)
-            print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+        loss, current = loss.item(), (batch + 1) * len(X)
+        batch_loss.append(loss)
+
+    return np.array(batch_loss)
 
 
 def train(epochs, dataloader, model, loss_fn, optimiser):
@@ -50,38 +51,13 @@ def train(epochs, dataloader, model, loss_fn, optimiser):
     """
 
     for epoch in range(epochs):
-        print(f"Epoch {epoch + 1}\n-------------------------------")
-        train_one_epoch(dataloader, model, loss_fn, optimiser)
+        print(f"-------------------------------\nEpoch {epoch + 1}")
+        loss = train_one_epoch(dataloader, model, loss_fn, optimiser)
+        print(f"Average loss: {np.average(loss)}")
 
 
-def create_dataloader(symbol: str='USDJPY', look_back: int= 32, batch_size: int = 64):
-    """
-    Creates and returns DataLoader objects for training and testing stock data.
-
-    This function constructs training and testing datasets using the provided stock symbol and look-back period.
-    It then initializes PyTorch DataLoader instances for both the training and testing datasets with the specified batch size.
-
-    Args:
-        batch_size (int, optional): The number of samples per batch to load. Defaults to 64.
-        symbol (str): The stock symbol or ticker for which the dataset is to be created.
-        look_back (int): The number of previous time steps (look-back period) used as input to predict the next time step.
-
-    Returns:
-        tuple: A tuple containing two DataLoader instances:
-            - train_dataloader: DataLoader for the training dataset.
-            - test_dataloader: DataLoader for the testing dataset.
-
-    Example:
-        train_loader, test_loader = create_dataloader(batch_size=32, symbol='USDJPY', look_back=30)
-    """
-    train_dataset = StockDataset(symbol, look_back, True)
-    test_dataset = StockDataset(symbol, look_back, False)
-
-    # Create data loaders.
-    train_dataloader = DataLoader(train_dataset, batch_size=batch_size)
-    test_dataloader = DataLoader(test_dataset, batch_size=batch_size)
-
-    return train_dataloader, test_dataloader
+def save_model(model, filepath: str):
+    torch.save(model.state_dict(), filepath)
 
 
 if __name__ == '__main__':
@@ -95,26 +71,33 @@ if __name__ == '__main__':
     print(f"Using {device} device")
 
     # hyperparameters
-    batch_size = 64
+    batch_size = 1
     lr = 1e-3
     epochs = 100
+    input_dim = 7
+    look_back = 32
+    symbol = 'USDJPY'
+    model_type = "lstm"
 
     # create model and move to device (cuda or cpu)
-    nn_model = NeuralNetwork().to(device)
-    lstm_model = LSTM(input_dim=7, output_dim=7, hidden_dim=32, num_layers=1).to(device)
+    # model = NeuralNetwork().to(device)
+    model = LSTM(input_dim=input_dim*batch_size, output_dim=7, hidden_dim=64, num_layers=1, device=device).to(device)
 
     # set loss function and optimiser
     loss_fn = nn.CrossEntropyLoss()
-    optimiser = torch.optim.SGD(nn_model.parameters(), lr=lr)
+    optimiser = torch.optim.SGD(model.parameters(), lr=lr)
 
     mt5_obj = MT5Class()
     mt5_obj.login_to_metatrader()
     mt5_obj.get_acc_info()
 
     # create dataloader for MNIST dataset
-    train_dl, test_dl = create_dataloader('USDJPY', 32, batch_size)
+    train_dl, test_dl = create_dataloader(symbol, look_back, batch_size, model_type)
 
     # training
-    train(epochs=epochs, dataloader=train_dl, model=lstm_model, loss_fn=loss_fn, optimiser=optimiser)
+    train(epochs=epochs, dataloader=train_dl, model=model, loss_fn=loss_fn, optimiser=optimiser)
 
-    # test(dataloader=train_dl, model=nn_model, loss_fn=loss_fn)
+    filepath = ("C:\\Users\\Harsh\\Desktop\\Coding Projects\\GitHub\\"
+                "Deep-Learning-Practice\\Stock_prediction\\models\\saved_models\\nn_model.pt")
+
+    save_model(model, filepath=filepath)

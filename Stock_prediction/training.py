@@ -1,12 +1,11 @@
 import numpy as np
 import torch
-from networkx.utils.backends import backends
 from torch import nn
+import matplotlib.pyplot as plt
 
 from MT5_Link import MT5Class
 from Stock_prediction.models.basic_nn_model import NeuralNetwork
 from Stock_prediction.models.lstm_model import LSTM
-
 from Stock_prediction.dataHandling import create_dataloader
 
 
@@ -19,22 +18,29 @@ def train_one_epoch(dataloader, model, loss_fn, optimiser):
         loss_fn (_type_): _description_
         optimiser (_type_): _description_
     """
-
+    model.to(device)
     model.train()
+    
     batch_loss = []
-    for batch, (X, y) in enumerate(dataloader):
+    batch_acc = []
+    for batch, (inputs, targets) in enumerate(dataloader):
         # moving to device and changing to
-        X, y = X.type(torch.float32).to(device), y.type(torch.float32).to(device)
-        # Compute prediction error
-        pred = torch.unsqueeze(model(X), 0)
-        loss = loss_fn(pred, y)
+        inputs, targets = inputs.type(torch.float32).to(device), targets.type(torch.float32).to(device)
+
+        inputs = torch.squeeze(inputs, 0)
+        targets = torch.squeeze(targets, 0)
+
+        pred = model(inputs)
+
+        loss = loss_fn(pred, targets)
 
         # Backpropagation
         loss.backward()
         optimiser.step()
         optimiser.zero_grad()
 
-        loss, current = loss.item(), (batch + 1) * len(X)
+        loss, current = loss.item(), (batch + 1) * len(inputs)
+
         batch_loss.append(loss)
 
     return np.array(batch_loss)
@@ -50,10 +56,19 @@ def train(epochs, dataloader, model, loss_fn, optimiser):
         optimiser (_type_): _description_
     """
 
+    epoch_loss = []
     for epoch in range(epochs):
-        print(f"-------------------------------\nEpoch {epoch + 1}")
+        # run one epoch
         loss = train_one_epoch(dataloader, model, loss_fn, optimiser)
-        print(f"Average loss: {np.average(loss)}")
+
+        if epoch % 1000 == 0:
+            print(f"-------------------------------\nEpoch {epoch + 1}")
+            print(f"Average loss: {np.average(loss)}")
+
+        epoch_loss.append(np.average(loss))
+
+    plt.plot(epoch_loss)
+    plt.show()
 
 
 def save_model(model, filepath: str):
@@ -71,9 +86,9 @@ if __name__ == '__main__':
     print(f"Using {device} device")
 
     # hyperparameters
-    batch_size = 1
+    batch_size = 16
     lr = 1e-3
-    epochs = 100
+    epochs = 5000
     input_dim = 7
     look_back = 32
     symbol = 'USDJPY'
@@ -81,18 +96,19 @@ if __name__ == '__main__':
 
     # create model and move to device (cuda or cpu)
     # model = NeuralNetwork().to(device)
-    model = LSTM(input_dim=input_dim*batch_size, output_dim=7, hidden_dim=64, num_layers=1, device=device).to(device)
+    model = LSTM(input_dim=input_dim, output_dim=7, hidden_dim=64, num_layers=1,
+                 device=device, batch_size=batch_size).to(device)
 
     # set loss function and optimiser
-    loss_fn = nn.CrossEntropyLoss()
-    optimiser = torch.optim.SGD(model.parameters(), lr=lr)
+    loss_fn = nn.MSELoss()
+    optimiser = torch.optim.Adam(model.parameters(), lr=lr)
 
     mt5_obj = MT5Class()
     mt5_obj.login_to_metatrader()
     mt5_obj.get_acc_info()
 
     # create dataloader for MNIST dataset
-    train_dl, test_dl = create_dataloader(symbol, look_back, batch_size, model_type)
+    train_dl, _ = create_dataloader(symbol, look_back, batch_size, model_type)
 
     # training
     train(epochs=epochs, dataloader=train_dl, model=model, loss_fn=loss_fn, optimiser=optimiser)

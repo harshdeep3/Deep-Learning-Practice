@@ -9,7 +9,7 @@ from Stock_prediction.models.lstm_model import LSTM
 from Stock_prediction.dataHandling import create_dataloader
 
 
-def train_one_epoch(dataloader, model, loss_fn, optimiser):
+def train_one_epoch(dataloader, model, loss_fn, optimiser, device):
     """This train the model for one epoch
 
     Args:
@@ -18,7 +18,6 @@ def train_one_epoch(dataloader, model, loss_fn, optimiser):
         loss_fn (_type_): _description_
         optimiser (_type_): _description_
     """
-    model.to(device)
     model.train()
     
     batch_loss = []
@@ -46,7 +45,7 @@ def train_one_epoch(dataloader, model, loss_fn, optimiser):
     return np.array(batch_loss)
 
 
-def train(epochs, dataloader, model, loss_fn, optimiser):
+def train(epochs, dataloader, model, loss_fn, optimiser, device):
     """this trains the model for a number of epochs
 
     Args:
@@ -59,9 +58,9 @@ def train(epochs, dataloader, model, loss_fn, optimiser):
     epoch_loss = []
     for epoch in range(epochs):
         # run one epoch
-        loss = train_one_epoch(dataloader, model, loss_fn, optimiser)
+        loss = train_one_epoch(dataloader, model, loss_fn, optimiser, device)
 
-        if epoch % 1000 == 0:
+        if epoch % 10 == 0:
             print(f"-------------------------------\nEpoch {epoch + 1}")
             print(f"Average loss: {np.average(loss)}")
 
@@ -86,11 +85,11 @@ if __name__ == '__main__':
     print(f"Using {device} device")
 
     # hyperparameters
-    batch_size = 16
+    batch_size = 2
     lr = 1e-3
-    epochs = 5000
+    epochs = 200
     input_dim = 7
-    look_back = 32
+    look_back = 5
     symbol = 'USDJPY'
     model_type = "lstm"
 
@@ -107,11 +106,11 @@ if __name__ == '__main__':
     mt5_obj.login_to_metatrader()
     mt5_obj.get_acc_info()
 
-    # create dataloader for MNIST dataset
+    # create dataloader
     train_dl, _ = create_dataloader(symbol, look_back, batch_size, model_type)
 
     # training
-    train(epochs=epochs, dataloader=train_dl, model=model, loss_fn=loss_fn, optimiser=optimiser)
+    train(epochs=epochs, dataloader=train_dl, model=model, loss_fn=loss_fn, optimiser=optimiser, device=device)
 
     filepath = ("C:\\Users\\Harsh\\Desktop\\Coding Projects\\GitHub\\"
                 "Deep-Learning-Practice\\Stock_prediction\\models\\saved_models\\nn_model.pt")

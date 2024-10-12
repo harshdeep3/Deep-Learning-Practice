@@ -56,14 +56,18 @@ def train(epochs, dataloader, model, loss_fn, optimiser, device):
         if epoch % 10 == 0:
             print(f"-------------------------------\nEpoch {epoch + 1}")
             print(f"Average loss: {np.average(loss)}")
-            epoch_loss.append(np.average(loss))
-        plt.plot(epoch_loss)
-        plt.show()
+        epoch_loss.append(np.average(loss))
+
+    plot_data(epoch_loss)
 
 
 def save_model(model, filepath: str):
     torch.save(model.state_dict(), filepath)
 
+
+def plot_data(data):
+    plt.plot(data)
+    plt.show()
 
 if __name__ == '__main__':
     device = (
@@ -78,7 +82,7 @@ if __name__ == '__main__':
     # hyperparameters
     batch_size = 2
     lr = 1e-3
-    epochs = 1
+    epochs = 2
     input_dim = 7
     output_dim = 7
     look_back = 32

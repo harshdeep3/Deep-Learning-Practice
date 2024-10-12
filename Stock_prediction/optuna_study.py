@@ -32,13 +32,13 @@ def objective(trial):
     ##################################################
     # Hyper-parameter selections
     ##################################################
-
-    n_layer = trial.suggest_int('n_layer', 1, 5)
-    batch_size = trial.suggest_int('batch_size', 1, 32)
-    lr = trial.suggest_float('lr', 1e-5, 1e-1, log=True)
-    hidden_dim = trial.suggest_int('hidden_dim', 32, 512)
-    look_back = trial.suggest_int('look_back', 1, 64)
-    n_epochs =  trial.suggest_int('n_epochs', 1, 5)
+    loss_fn_choice = trial.suggest_categorical("loss_fun", ["L1"])
+    n_layer = trial.suggest_categorical("n_layers", [1, 2, 3, 4, 5, 6])
+    batch_size = trial.suggest_categorical("batch_size", [1, 2, 4, 8, 16, 32, 64, 124, 256, 512])
+    lr = trial.suggest_categorical('lr', [1e-5, 1e-4, 1e-3, 1e-2, 1e-1])
+    hidden_dim = trial.suggest_categorical('hidden_dim', [32, 64, 128, 256, 512])
+    look_back = trial.suggest_categorical('look_back', [1, 2, 4, 8, 16, 32, 64, 128])
+    n_epochs =  trial.suggest_categorical('n_epochs', [10, 25, 50, 100, 150, 200, 300, 500, 1000])
 
     print(f"n_layer:  {n_layer}, batch_size:  {batch_size}, lr:  {lr}, hidden_dim:  {hidden_dim}, look_back:  "
           f"{look_back}, n_epochs:  {n_epochs}")
@@ -60,7 +60,11 @@ def objective(trial):
                  device=device, batch_size=batch_size).to(device)
 
     # set loss function and optimiser
-    loss_fn = nn.MSELoss()
+    if loss_fn_choice == "MSE":
+        loss_fn = nn.MSELoss()
+    elif loss_fn_choice == "L1":
+        loss_fn = nn.L1Loss()
+
     optimiser = torch.optim.Adam(model.parameters(), lr=lr)
 
     model.train()
@@ -87,7 +91,7 @@ def main():
                                f"/Stock_prediction/hyperparameters/{now}.txt")
 
     study = optuna.create_study(direction="minimize")
-    study.optimize(objective, n_trials=1, timeout=2000)
+    study.optimize(objective, n_trials=100, timeout=2000)
 
     pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
     complete_trials = study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])

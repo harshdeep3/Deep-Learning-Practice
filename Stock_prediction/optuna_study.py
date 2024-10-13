@@ -35,10 +35,10 @@ def objective(trial):
     loss_fn_choice = trial.suggest_categorical("loss_fun", ["L1"])
     n_layer = trial.suggest_categorical("n_layers", [1, 2, 3, 4, 5, 6])
     batch_size = trial.suggest_categorical("batch_size", [1, 2, 4, 8, 16, 32, 64, 124, 256, 512])
-    lr = trial.suggest_categorical('lr', [1e-5, 1e-4, 1e-3, 1e-2, 1e-1])
+    lr = trial.suggest_categorical('lr', [0.00001, 0.0001, 0.001, 0.01, 0.1])
     hidden_dim = trial.suggest_categorical('hidden_dim', [32, 64, 128, 256, 512])
     look_back = trial.suggest_categorical('look_back', [1, 2, 4, 8, 16, 32, 64, 128])
-    n_epochs =  trial.suggest_categorical('n_epochs', [10, 25, 50, 100, 150, 200, 300, 500, 1000])
+    n_epochs =  trial.suggest_categorical('n_epochs', [10, 25, 50, 100])
 
     print(f"n_layer:  {n_layer}, batch_size:  {batch_size}, lr:  {lr}, hidden_dim:  {hidden_dim}, look_back:  "
           f"{look_back}, n_epochs:  {n_epochs}")
@@ -49,7 +49,7 @@ def objective(trial):
     symbol = 'USDJPY'
     model_type = "lstm"
     input_dim = 7
-    output_dim = 7
+    output_dim = 1
 
     train_dl, _ = create_dataloader(symbol, look_back, batch_size, model_type)
 
@@ -71,17 +71,17 @@ def objective(trial):
 
     for epoch in range(n_epochs):
         # run one epoch
-        loss = train_one_epoch(train_dl, model, loss_fn, optimiser, device)
-        if epoch % 1 == 0:
+        loss, mae = train_one_epoch(train_dl, model, loss_fn, optimiser, device)
+        if epoch % 10 == 0:
             print(f"-------------------------------\nEpoch {epoch + 1}")
-            print(f"Average loss: {np.average(loss)}")
+            print(f"Average loss: {np.average(loss)}, mae: {np.average(mae)}")
 
-        trial.report(np.average(loss), epoch)
+        trial.report(np.average(mae), epoch)
 
         if trial.should_prune():
             raise optuna.exceptions.TrialPruned()
 
-    return np.average(loss)
+    return np.average(mae)
 
 
 def main():
@@ -91,7 +91,7 @@ def main():
                                f"/Stock_prediction/hyperparameters/{now}.txt")
 
     study = optuna.create_study(direction="minimize")
-    study.optimize(objective, n_trials=100, timeout=2000)
+    study.optimize(objective, n_trials=100, )
 
     pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
     complete_trials = study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])

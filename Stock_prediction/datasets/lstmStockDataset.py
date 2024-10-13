@@ -64,7 +64,7 @@ class StockDataset(Dataset):
                 # input data
                 training_data_input.append(training_data_raw[index: index + look_back])
                 # target data
-                training_data_target.append(training_data_raw[index + look_back])
+                training_data_target.append(training_data_raw[index + look_back][3])
 
             self.inputs = training_data_input
             self.targets = training_data_target
@@ -78,7 +78,7 @@ class StockDataset(Dataset):
                 # input data
                 testing_data_input.append(testing_data_raw[index: index + look_back])
                 # target data
-                testing_data_target.append(testing_data_raw[index + look_back])
+                testing_data_target.append(testing_data_raw[index + look_back][3])
 
             self.inputs = testing_data_input
             self.targets = testing_data_target

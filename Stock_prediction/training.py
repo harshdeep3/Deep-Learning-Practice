@@ -3,6 +3,7 @@ import numpy as np
 import torch
 from torch import nn
 import matplotlib.pyplot as plt
+from sklearn.metrics import mean_absolute_error
 
 from MT5_Link import MT5Class
 from Stock_prediction.models.basic_nn_model import NeuralNetwork
@@ -23,12 +24,14 @@ def train_one_epoch(dataloader, model, loss_fn, optimiser, device):
     model.train()
     
     batch_loss = []
+    batch_mae = []
     for batch, (inputs, targets) in enumerate(dataloader):
         # moving to device and changing to
         inputs, targets = inputs.type(torch.float32).to(device), targets.type(torch.float32).to(device)
         # Compute prediction error
-        pred = torch.unsqueeze(model(inputs), 0)
+        pred = torch.squeeze(model(inputs))
         loss = loss_fn(pred, targets)
+        mae = mean_absolute_error(pred.detach().cpu().numpy(), targets.detach().cpu().numpy())
 
         # Backpropagation
         loss.backward()
@@ -37,8 +40,9 @@ def train_one_epoch(dataloader, model, loss_fn, optimiser, device):
 
         loss, current = loss.item(), (batch + 1) * len(inputs)
         batch_loss.append(loss)
+        batch_mae.append(mae)
 
-    return batch_loss
+    return batch_loss, batch_mae
 
 
 def train(epochs, dataloader, model, loss_fn, optimiser, device):
@@ -51,14 +55,17 @@ def train(epochs, dataloader, model, loss_fn, optimiser, device):
         optimiser (_type_): _description_
     """
     epoch_loss = []
+    epoch_mae = []
     for epoch in range(epochs):
-        loss = train_one_epoch(dataloader, model, loss_fn, optimiser, device)
+        loss, mae = train_one_epoch(dataloader, model, loss_fn, optimiser, device)
         if epoch % 10 == 0:
             print(f"-------------------------------\nEpoch {epoch + 1}")
-            print(f"Average loss: {np.average(loss)}")
+            print(f"Average loss: {np.average(loss)}, mae: {np.average(mae)}")
         epoch_loss.append(np.average(loss))
+        epoch_mae.append((np.average(mae)))
 
     plot_data(epoch_loss)
+    plot_data(epoch_mae)
 
 
 def save_model(model, filepath: str):
@@ -81,13 +88,13 @@ if __name__ == '__main__':
 
     # hyperparameters
     batch_size = 2
-    lr = 1e-3
-    epochs = 2
+    lr = 0.01
+    epochs = 10
     input_dim = 7
-    output_dim = 7
-    look_back = 32
-    hidden_dim = 64
-    num_layers = 1
+    output_dim = 1
+    look_back = 8
+    hidden_dim = 128
+    num_layers = 6
     symbol = 'USDJPY'
     model_type = "lstm"
 

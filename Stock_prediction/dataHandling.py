@@ -38,8 +38,16 @@ def create_dataloader(symbol: str='USDJPY', look_back: int= 32, batch_size: int 
         train_dataset = LSTMDataset(symbol, look_back, True, training_input_file, training_target_file)
         test_dataset = LSTMDataset(symbol, look_back, False, testing_input_file, testing_target_file)
     elif model_type == "nn":
-        train_dataset = NNDataset(symbol, True)
-        test_dataset = NNDataset(symbol, False)
+        training_input_file = ("C:\\Users\\Harsh\\Desktop\\Coding Projects\\GitHub\\Deep-Learning-Practice"
+                               "\\Stock_prediction\\datasets\\training_nn_input_data.pt")
+        training_target_file = ("C:\\Users\\Harsh\\Desktop\\Coding Projects\\GitHub\\Deep-Learning-Practice"
+                               "\\Stock_prediction\\datasets\\training_nn_target_data.pt")
+        testing_input_file = ("C:\\Users\\Harsh\\Desktop\\Coding Projects\\GitHub\\Deep-Learning-Practice"
+                               "\\Stock_prediction\\datasets\\testing_nn_input_data.pt")
+        testing_target_file = ("C:\\Users\\Harsh\\Desktop\\Coding Projects\\GitHub\\Deep-Learning-Practice"
+                               "\\Stock_prediction\\datasets\\testing_nn_target_data.pt")
+        train_dataset = NNDataset(symbol, True, training_input_file, training_target_file)
+        test_dataset = NNDataset(symbol, False, testing_input_file, testing_target_file)
     else:
         train_dataset = None
         test_dataset = None

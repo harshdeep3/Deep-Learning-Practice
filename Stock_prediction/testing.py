@@ -42,17 +42,22 @@ def plot_data(actual_values, preds):
 
     fig, axs = plt.subplots(4)
 
+    axs[0].set_title('High')
     axs[0].plot(high_pred, label="High Pred")
     axs[0].plot(high, label="High")
+
+    axs[1].set_title('Close')
     axs[1].plot(close_pred, label="Close Pred")
     axs[1].plot(close, label="Close")
+
+    axs[2].set_title('Low')
     axs[2].plot(low_pred, label="Low Pred")
     axs[2].plot(low, label="Low")
+
+    axs[3].set_title('Open')
     axs[3].plot(open_pred, label="Open Pred")
     axs[3].plot(open, label="Open")
 
-    # Create a legend
-    plt.legend()
     plt.xlabel('Time-Step')
     plt.ylabel('Price')
     plt.show()
@@ -127,12 +132,17 @@ if __name__ == '__main__':
     symbol = 'USDJPY'
     model_type = "nn"
 
-    filepath = ("C:\\Users\\Harsh\\Desktop\\Coding Projects\\GitHub\\"
-                "Deep-Learning-Practice\\Stock_prediction\\models\\saved_models\\lstm_model.pt")
+    if model_type == "lstm":
 
-    # create and load model
-    # model = load_lstm_model(filepath, input_dim, output_dim, hidden_dim, num_layers, device, batch_size)
-    model = load_nn_model(filepath, input_dim, output_dim, hidden_dim)
+        filepath = ("C:\\Users\\Harsh\\Desktop\\Coding Projects\\GitHub\\"
+                    "Deep-Learning-Practice\\Stock_prediction\\models\\saved_models\\lstm_model.pt")
+        # create and load model
+        model = load_lstm_model(filepath, input_dim, output_dim, hidden_dim, num_layers, device, batch_size)
+    else:
+        filepath = ("C:\\Users\\Harsh\\Desktop\\Coding Projects\\GitHub\\"
+                    "Deep-Learning-Practice\\Stock_prediction\\models\\saved_models\\nn_model.pt")
+        model = load_nn_model(filepath, input_dim, output_dim, hidden_dim)
+
     model  = model.to(device)
 
     # set loss function and optimiser

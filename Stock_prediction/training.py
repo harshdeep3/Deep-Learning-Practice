@@ -11,7 +11,7 @@ from Stock_prediction.models.lstm_model import LSTM
 from Stock_prediction.dataHandling import create_dataloader
 
 
-def train_one_epoch(dataloader, model, loss_fn, optimiser, device):
+def train_one_epoch(dataloader, model, loss_fn, optimiser, device, batch_size):
     """This train the model for one epoch
 
     Args:
@@ -29,7 +29,10 @@ def train_one_epoch(dataloader, model, loss_fn, optimiser, device):
         # moving to device and changing to
         inputs, targets = inputs.type(torch.float32).to(device), targets.type(torch.float32).to(device)
         # Compute prediction error
-        pred = torch.squeeze(model(inputs))
+        if batch_size == 1:
+            pred = model(inputs)
+        else:
+            pred = torch.squeeze(model(inputs))
         loss = loss_fn(pred, targets)
         mae = mean_absolute_error(pred.detach().cpu().numpy(), targets.detach().cpu().numpy())
 
@@ -45,7 +48,7 @@ def train_one_epoch(dataloader, model, loss_fn, optimiser, device):
     return batch_loss, batch_mae
 
 
-def train(epochs, dataloader, model, loss_fn, optimiser, device):
+def train(epochs, dataloader, model, loss_fn, optimiser, device, batch_size):
     """this trains the model for a number of epochs
 
     Args:
@@ -57,8 +60,8 @@ def train(epochs, dataloader, model, loss_fn, optimiser, device):
     epoch_loss = []
     epoch_mae = []
     for epoch in range(epochs):
-        loss, mae = train_one_epoch(dataloader, model, loss_fn, optimiser, device)
-        if epoch % 10 == 0:
+        loss, mae = train_one_epoch(dataloader, model, loss_fn, optimiser, device, batch_size)
+        if epoch % 1 == 0:
             print(f"-------------------------------\nEpoch {epoch + 1}")
             print(f"Average loss: {np.average(loss)}, mae: {np.average(mae)}")
         epoch_loss.append(np.average(loss))
@@ -87,21 +90,28 @@ if __name__ == '__main__':
     print(f"Using {device} device")
 
     # hyperparameters
-    batch_size = 2
+    batch_size = 1
     lr = 0.01
-    epochs = 10
-    input_dim = 7
-    output_dim = 1
-    look_back = 8
-    hidden_dim = 128
-    num_layers = 6
+    epochs = 10000
     symbol = 'USDJPY'
-    model_type = "lstm"
+    model_type = "nn"
+
+    if model_type == "lstm":
+        input_dim = 7
+        output_dim = 1
+        hidden_dim = 128
+        look_back = 8
+        num_layers = 6
+    else:
+        input_dim = 7
+        output_dim = 7
+        hidden_dim = 128
+        look_back = 1
 
     # create model and move to device (cuda or cpu)
-    # model = NeuralNetwork().to(device)
-    model = LSTM(input_dim=input_dim, output_dim=output_dim, hidden_dim=hidden_dim, num_layers=num_layers,
-                 device=device, batch_size=batch_size).to(device)
+    model = NeuralNetwork(input_dim=input_dim, output_dim=output_dim, hidden_dim=hidden_dim).to(device)
+    # model = LSTM(input_dim=input_dim, output_dim=output_dim, hidden_dim=hidden_dim, num_layers=num_layers,
+    #              device=device, batch_size=batch_size).to(device)
 
     # set loss function and optimiser
     loss_fn = nn.L1Loss()
@@ -115,9 +125,14 @@ if __name__ == '__main__':
     train_dl, _ = create_dataloader(symbol, look_back, batch_size, model_type)
 
     # training
-    train(epochs=epochs, dataloader=train_dl, model=model, loss_fn=loss_fn, optimiser=optimiser, device=device)
+    train(epochs=epochs, dataloader=train_dl, model=model, loss_fn=loss_fn, optimiser=optimiser, device=device,
+          batch_size=batch_size)
 
-    filepath = ("C:\\Users\\Harsh\\Desktop\\Coding Projects\\GitHub\\"
-                "Deep-Learning-Practice\\Stock_prediction\\models\\saved_models\\lstm_model.pt")
+    if model_type == "lstm":
+        filepath = ("C:\\Users\\Harsh\\Desktop\\Coding Projects\\GitHub\\"
+                    "Deep-Learning-Practice\\Stock_prediction\\models\\saved_models\\lstm_model.pt")
+    else:
+        filepath = ("C:\\Users\\Harsh\\Desktop\\Coding Projects\\GitHub\\"
+                    "Deep-Learning-Practice\\Stock_prediction\\models\\saved_models\\nn_model.pt")
 
     save_model(model, filepath=filepath)

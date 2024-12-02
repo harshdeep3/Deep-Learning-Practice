@@ -35,8 +35,8 @@ class StockDataset(Dataset):
 
             self.create_input_and_target_data(df, look_back, is_training)
         else:
-            self.inputs = torch.load(input_file)
-            self.targets = torch.load(target_file)
+            self.inputs = torch.load(input_file, weights_only=True)
+            self.targets = torch.load(target_file,  weights_only=True)
 
 
     def create_input_and_target_data(self, df, look_back, is_training):

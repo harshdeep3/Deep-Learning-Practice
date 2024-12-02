@@ -61,7 +61,7 @@ def train(epochs, dataloader, model, loss_fn, optimiser, device, batch_size):
     epoch_mae = []
     for epoch in range(epochs):
         loss, mae = train_one_epoch(dataloader, model, loss_fn, optimiser, device, batch_size)
-        if epoch % 1 == 0:
+        if epoch % 100 == 0:
             print(f"-------------------------------\nEpoch {epoch + 1}")
             print(f"Average loss: {np.average(loss)}, mae: {np.average(mae)}")
         epoch_loss.append(np.average(loss))
@@ -90,28 +90,30 @@ if __name__ == '__main__':
     print(f"Using {device} device")
 
     # hyperparameters
-    batch_size = 1
+    batch_size = 128
     lr = 0.01
     epochs = 10000
     symbol = 'USDJPY'
-    model_type = "nn"
+    model_type = "lstm"
 
     if model_type == "lstm":
         input_dim = 7
-        output_dim = 1
+        output_dim = 7
         hidden_dim = 128
         look_back = 8
         num_layers = 6
+
+        # create model and move to device (cuda or cpu)
+        model = LSTM(input_dim=input_dim, output_dim=output_dim, hidden_dim=hidden_dim, num_layers=num_layers,
+                     device=device, batch_size=batch_size).to(device)
     else:
         input_dim = 7
         output_dim = 7
         hidden_dim = 128
         look_back = 1
 
-    # create model and move to device (cuda or cpu)
-    model = NeuralNetwork(input_dim=input_dim, output_dim=output_dim, hidden_dim=hidden_dim).to(device)
-    # model = LSTM(input_dim=input_dim, output_dim=output_dim, hidden_dim=hidden_dim, num_layers=num_layers,
-    #              device=device, batch_size=batch_size).to(device)
+        # create model and move to device (cuda or cpu)
+        model = NeuralNetwork(input_dim=input_dim, output_dim=output_dim, hidden_dim=hidden_dim).to(device)
 
     # set loss function and optimiser
     loss_fn = nn.L1Loss()

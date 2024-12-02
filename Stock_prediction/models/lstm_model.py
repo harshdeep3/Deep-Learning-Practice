@@ -24,16 +24,28 @@ class LSTM(nn.Module):
 
         # batch_first=True causes input/output tensors to be of shape
         # (batch_dim, seq_dim, feature_dim)
-        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers, batch_first=True)
+        self.lstm_1 = nn.LSTM(input_dim, 128, num_layers, batch_first=True)
+        self.activation_1 = nn.ReLU()
+        self.lstm_2 = nn.LSTM(128, 256, num_layers, batch_first=True)
+        self.activation_2 = nn.ReLU()
+        self.lstm_3 = nn.LSTM(256, hidden_dim, num_layers, batch_first=True)
+        self.activation_3 = nn.ReLU()
 
         # Readout layer
         self.fc = nn.Linear(hidden_dim, output_dim)
 
     def forward(self, x):
 
+        if self.batch_size == 1:
+            x = torch.squeeze(x)
         # We need to detach as we are doing truncated backpropagation through time (BPTT)
         # If we don't, we'll backprop all the way to the start even after going through another batch
-        out, _ = self.lstm(x)
+        out, _ = self.lstm_1(x)
+        out = self.activation_1(out)
+        out, _ = self.lstm_2(out)
+        out = self.activation_2(out)
+        out, _ = self.lstm_3(out)
+        out = self.activation_3(out)
 
         # Index hidden state of last time step
         out = self.fc(out)

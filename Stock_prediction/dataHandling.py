@@ -3,7 +3,8 @@ from Stock_prediction.datasets.lstmStockDataset import StockDataset as LSTMDatas
 from Stock_prediction.datasets.nnStockDataset import StockDataset as NNDataset
 
 
-def create_dataloader(symbol: str='USDJPY', look_back: int= 32, batch_size: int = 64, model_type: str = "nn"):
+def create_dataloader(symbol: str='USDJPY', look_back: int= 32, batch_size: int = 64, model_type: str = "nn",
+                      optuna_study = False):
     """
     Creates and returns DataLoader objects for training and testing stock data.
 
@@ -11,6 +12,7 @@ def create_dataloader(symbol: str='USDJPY', look_back: int= 32, batch_size: int 
     It then initializes PyTorch DataLoader instances for both the training and testing datasets with the specified batch size.
 
     Args:
+        optuna_study:
         batch_size (int, optional): The number of samples per batch to load. Defaults to 64.
         symbol (str): The stock symbol or ticker for which the dataset is to be created.
         look_back (int): The number of previous time steps (look-back period) used as input to predict the next time step.
@@ -25,13 +27,13 @@ def create_dataloader(symbol: str='USDJPY', look_back: int= 32, batch_size: int 
     """
     if model_type == "lstm":
         training_input_file = ("C:\\Users\\Harsh\\Desktop\\Coding Projects\\GitHub\\Deep-Learning-Practice"
-                               "\\Stock_prediction\\datasets\\training_input_data.pt")
+                               "\\Stock_prediction\\datasets\\training_lstm_input_data.pt")
         training_target_file = ("C:\\Users\\Harsh\\Desktop\\Coding Projects\\GitHub\\Deep-Learning-Practice"
-                               "\\Stock_prediction\\datasets\\training_target_data.pt")
+                               "\\Stock_prediction\\datasets\\training_lstm_target_data.pt")
         testing_input_file = ("C:\\Users\\Harsh\\Desktop\\Coding Projects\\GitHub\\Deep-Learning-Practice"
-                               "\\Stock_prediction\\datasets\\testing_input_data.pt")
+                               "\\Stock_prediction\\datasets\\testing_lstm_input_data.pt")
         testing_target_file = ("C:\\Users\\Harsh\\Desktop\\Coding Projects\\GitHub\\Deep-Learning-Practice"
-                               "\\Stock_prediction\\datasets\\testing_target_data.pt")
+                               "\\Stock_prediction\\datasets\\testing_lstm_target_data.pt")
 
         train_dataset = LSTMDataset(symbol, look_back, True, training_input_file, training_target_file)
         test_dataset = LSTMDataset(symbol, look_back, False, testing_input_file, testing_target_file)

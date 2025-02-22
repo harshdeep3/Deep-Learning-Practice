@@ -3,10 +3,10 @@ import pandas as pd
 from datetime import datetime
 import pytz
 
-LOGIN = 51959442
+LOGIN = 52069703
 SERVER = "ICMarketsSC-Demo"
 # password
-PASSWORD = "@JwrNO$x7hYSso"
+PASSWORD = "8z$y2UX5s6aPFb"
 
 # display data on the MetaTrader 5 package
 print("MetaTrader5 package author: ", mt5.__author__)
@@ -14,12 +14,42 @@ print("MetaTrader5 package version: ", mt5.__version__)
 
 
 class MT5Class:
+    """
+    Handles MetaTrader 5 terminal login and retrieves account information.
 
+    This class manages the login process to the MetaTrader 5 trading terminal using given credentials
+    and retrieves account information. It provides methods to access and display this information
+    in an organized format, using a pandas DataFrame for better readability.
+
+    Attributes:
+        mt5_result (bool): Stores the login operation status. True if login is successful,
+            otherwise False.
+        account_info (pd.DataFrame): DataFrame storing account information with columns
+            'property' and 'value'.
+    """
     def __init__(self):
         self.mt5_result = None
         self.account_info = None
 
     def login_to_metatrader(self):
+        """
+        Logs in to the MetaTrader 5 terminal using the given account credentials.
+
+        This function initializes a connection to the MetaTrader 5 terminal and attempts to
+        log in using the provided login credentials and account server. It checks whether
+        the login attempt is successful, and if it fails, it terminates the process with
+        an error message.
+
+        Attributes:
+            SERVER (str): The server name associated with the trading account.
+            LOGIN (int): The numeric ID of the trading account, used for authentication.
+            PASSWORD (str): The password for the MetaTrader 5 trading account.
+            mt5_result (bool): The status of the login operation. True if successful,
+                otherwise False.
+
+        Raises:
+            SystemExit: Exits the process if the login attempt is unsuccessful.
+        """
         # Connect to the MetaTrader 5 terminal
         mt5.initialize()
 
@@ -35,7 +65,19 @@ class MT5Class:
             quit()
 
     def get_acc_info(self):
+        """
+        Retrieves and processes the MetaTrader 5 account information, storing it in a DataFrame
+        and printing the structured output.
 
+        This method accesses the account information from MetaTrader 5 and checks if the information
+        retrieval is successful. If successful, it converts the account information into a dictionary
+        format and stores it in a pandas DataFrame. The DataFrame organizes the data into two columns:
+        'property' and 'value'. The resulting DataFrame is then printed to the console. If the account
+        information is unavailable, an appropriate message is displayed.
+
+        Returns:
+            None
+        """
         if mt5.account_info() is None:
             print("Account info is None!")
         else:
@@ -44,8 +86,24 @@ class MT5Class:
             print(self.account_info)
 
 
-def get_historic_data(fx_symbol, fx_timeframe, fx_count):
+def get_historic_data(fx_symbol: str, fx_timeframe, fx_count: int) -> pd.DataFrame | None:
+    """
+    Fetches historic data for a given financial instrument and timeframe using MetaTrader 5 (MT5) API.
 
+    This function retrieves historical price data for a specified financial symbol and timeframe from
+    MetaTrader 5 using the provided count of data points. The data is returned as a pandas DataFrame,
+    where the 'time' field is converted to a datetime format. If data cannot be retrieved, an error
+    message is printed, and None is returned.
+
+    Args:
+        fx_symbol: The financial instrument symbol (e.g., 'EURUSD') to fetch data for.
+        fx_timeframe: The timeframe for the data (e.g., 'h1', 'd1') as defined in MT5 timeframes.
+        fx_count: The number of historical data points to retrieve.
+
+    Returns:
+        pandas.DataFrame or None: A DataFrame containing the historical price data where 'time' is in
+        datetime format, or None if data retrieval fails.
+    """
     rates = mt5.copy_rates_from_pos(fx_symbol, fx_timeframe, 0, fx_count)
     # dataframe
     historic_df = pd.DataFrame(rates)

@@ -6,36 +6,38 @@ import torch
 import numpy as np
 import MetaTrader5 as mt5
 import pytz
+
 from Stock_prediction.MT5_Link import get_historic_data
 from torch.utils.data import Dataset
 
 
 class StockDataset(Dataset):
     """
-    Represents a dataset for loading and managing historical stock data.
+    Represents a dataset of stock market data for use in machine learning models.
 
-    This class is designed to interact with Metatrader 5 API to fetch historical data
-    for a given stock symbol, process it, and save it into a format compatible with
-    PyTorch datasets. It supports both training and testing modes, where the dataset is
-    split accordingly. Tensors can be loaded from the file if they already exist or
-    recreated from the raw data.
+    This class loads, processes, and manages historical stock market data for a
+    given symbol, either for training or testing purposes, as specified by the
+    `is_training` flag. It allows for data preprocessing, including splitting
+    datasets, creating input-target pairs, and saving/loading datasets to/from
+    disk.
 
     Attributes:
-        symbol (str): The stock symbol to fetch the historical data for.
-        is_training (bool): Indicates if the dataset is being prepared for training.
-        input_file (str): The file path where input tensors are saved or loaded.
-        target_file (str): The file path where target tensors are saved or loaded.
-        inputs (np.ndarray or torch.Tensor): Input data for the dataset.
-        targets (np.ndarray or torch.Tensor): Target data for the dataset.
-        timeframe (int): The Metatrader 5 timeframe constant representing the time interval
-            of the fetched data.
-        timezone (pytz.timezone): The timezone used for aligning timestamps in the dataset
-            (set to UTC by default).
-        count (int): The number of historical data points retrieved from the API.
-        training_data_len (int): The length of the training dataset, determined as 80%
-            of the total number of data points.
+        symbol (str): The stock symbol for which the dataset is created.
+        is_training (bool): Indicates whether the dataset is for training or not.
+        input_file (str): File path to save/load the input data tensor.
+        target_file (str): File path to save/load the target data tensor.
+        short_term_time_period (int): The time period for short-term data processing.
+        spilt_incides (int): The number of indices to split the dataset into smaller chunks.
+        timezone: The time zone for the dataset, set to UTC.
+        timeframe: The time frame of the stock data, defaulted to `mt5.TIMEFRAME_M5`.
+        count (int): The number of data points to fetch from the source.
+        training_data_len (int): The length of training data, calculated as 80% of
+            the total data length.
+        inputs: Tensor representation of the input data.
+        targets: Tensor representation of the target data.
     """
-    def __init__(self, symbol :str, is_training: bool, input_file: str, target_file: str):
+    def __init__(self, symbol :str, is_training: bool, input_file: str, target_file: str, short_term_time_period: int,
+                 spilt_incides: int):
 
         # precision point
         torch.set_printoptions(precision=20)
@@ -63,27 +65,27 @@ class StockDataset(Dataset):
             self.input_file = input_file
             self.target_file = target_file
 
-            self.create_input_and_target_data(df, is_training)
+            self.create_input_and_target_data(df, is_training, short_term_time_period, spilt_incides)
         else:
             self.inputs = torch.load(input_file, weights_only=True)
             self.targets = torch.load(target_file,  weights_only=True)
 
-
-    def create_input_and_target_data(self, df: pandas.DataFrame, is_training: bool):
+    def create_input_and_target_data(self, df: pandas.DataFrame, is_training: bool, short_term_time_period: int,
+                                     spilt_incides: int):
         """
-        Creates and initializes input and target datasets for both training and testing data.
-
-        Depending on whether the model is training or not, the method slices the provided
-        DataFrame into either training or testing sets. The respective sets are then
-        converted to numpy arrays and saved as tensors to the locations specified by
-        `self.input_file` and `self.target_file`.
+        Creates input and target data for training or testing by processing the given dataset (DataFrame). This method
+        segments the dataset into appropriate training and testing sets, splits the data into smaller subsets based on the
+        provided parameters, and generates formatted label arrays for the model. The processed data is then saved to
+        designated files for later use.
 
         Args:
-            df (pd.DataFrame): The input dataset from which training or testing data
-                will be extracted.
-            is_training (bool): A flag indicating whether the operation is for training
-                data (`True`) or testing data (`False`).
+            df (pandas.DataFrame): The dataset containing numerical data to be processed for inputs and targets.
+            is_training (bool): A flag indicating whether to process the data in training mode or testing mode.
+            short_term_time_period (int): The time period length used to segment data for short-term predictions.
+            spilt_incides (int): The number of segments into which the data is split for label generation.
         """
+        labels = np.array([])
+
         # create training and testing dataframes
         training_data = df[:self.training_data_len]
         testing_data = df[self.training_data_len:]
@@ -91,15 +93,45 @@ class StockDataset(Dataset):
         training_data_raw = training_data.to_numpy(dtype=np.double)
         testing_data_raw = testing_data.to_numpy(dtype=np.double)
 
-        if is_training:
-            self.inputs = training_data_raw
-            self.targets = training_data_raw
+        len_training_data = len(training_data_raw)
 
-            torch.save(torch.Tensor(self.inputs), self.input_file)
-            torch.save(torch.Tensor(self.targets), self.target_file)
+        for raw_data_idx in range(len_training_data - (spilt_incides * 2), 0, -1):
+
+            if raw_data_idx > len_training_data - short_term_time_period - spilt_incides - 1:
+
+                raw_data = training_data_raw[raw_data_idx:]
+                # spilt the data into 10 lists
+                spilt_data  = np.array_split(raw_data, spilt_incides * 2)
+
+                for data in spilt_data:
+                    labels = np.append(labels, data[-1][:4])
+            else:
+                long_raw_term_data = training_data_raw[raw_data_idx: raw_data_idx + short_term_time_period]
+                short_raw_term_data = training_data_raw[raw_data_idx + short_term_time_period:]
+
+                # spilt for short term and long term predict
+                short_term_data = np.array_split(short_raw_term_data, spilt_incides)
+                long_term_data = np.array_split(long_raw_term_data, spilt_incides)
+
+                # adding data to labels array
+                for data in short_term_data:
+                    labels = np.append(labels, data[-1][:4])
+
+                for data in long_term_data:
+                    labels = np.append(labels, data[-1][:4])
+
+        # reshaping the labels to length of input by spilt_window * 2 * 4
+        labels = labels.reshape(-1, spilt_incides * 2 * 4)
+
+        if is_training:
+            self.inputs = torch.from_numpy(training_data_raw[: -spilt_incides * 2])
+            self.targets = torch.from_numpy(labels)
+
+            torch.save(self.inputs, self.input_file)
+            torch.save(self.targets, self.target_file)
         else:
-            self.inputs = testing_data_raw
-            self.targets = testing_data_raw
+            self.inputs = testing_data_raw[: -spilt_incides * 2]
+            self.targets = labels
 
             torch.save(torch.Tensor(self.inputs), self.input_file)
             torch.save(torch.Tensor(self.targets), self.target_file)

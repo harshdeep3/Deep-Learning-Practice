@@ -3,8 +3,8 @@ from Stock_prediction.datasets.lstmStockDataset import StockDataset as LSTMDatas
 from Stock_prediction.datasets.nnStockDataset import StockDataset as NNDataset
 
 
-def create_dataloader(symbol: str='USDJPY', look_back: int= 32, batch_size: int = 64, model_type: str = "nn",
-                      optuna_study = False):
+def create_dataloader(symbol: str='USDJPY', look_back: int= 32, batch_size: int = 64, short_term_time_period: int =30,
+                      spilt_indices: int = 5, model_type: str = "nn", optuna_study = False):
     """
     Creates and returns DataLoader objects for training and testing stock data.
 
@@ -46,8 +46,10 @@ def create_dataloader(symbol: str='USDJPY', look_back: int= 32, batch_size: int 
                                "\\Stock_prediction\\datasets\\testing_nn_input_data.pt")
         testing_target_file = ("C:\\Users\\Harsh\\Desktop\\Coding Projects\\GitHub\\Deep-Learning-Practice"
                                "\\Stock_prediction\\datasets\\testing_nn_target_data.pt")
-        train_dataset = NNDataset(symbol, True, training_input_file, training_target_file)
-        test_dataset = NNDataset(symbol, False, testing_input_file, testing_target_file)
+        train_dataset = NNDataset(symbol, True, training_input_file, training_target_file,
+                                  short_term_time_period, spilt_indices)
+        test_dataset = NNDataset(symbol, False, testing_input_file, testing_target_file,
+                                 short_term_time_period, spilt_indices)
     else:
         train_dataset = None
         test_dataset = None

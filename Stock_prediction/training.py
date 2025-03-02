@@ -147,6 +147,8 @@ if __name__ == '__main__':
     dropout = 0.05
     epochs = 2000
     symbol = 'USDJPY'
+    short_term_time_period = 30
+    spilt_indices = 5
     model_type = "mlp"
 
     if model_type == "lstm":
@@ -161,7 +163,7 @@ if __name__ == '__main__':
                      device=device, batch_size=batch_size).to(device)
     else:
         input_dim = 7
-        output_dim = 7
+        output_dim = spilt_indices * 2 * 4
         hidden_dim = 128
         look_back = 1
 
@@ -178,7 +180,8 @@ if __name__ == '__main__':
     mt5_obj.get_acc_info()
 
     # create dataloader
-    train_dl, _ = create_dataloader(symbol, look_back, batch_size, model_type)
+    train_dl, _ = create_dataloader(symbol, look_back, batch_size, short_term_time_period,
+                                    spilt_indices, model_type)
 
     # training
     train(epochs=epochs, dataloader=train_dl, model=model, loss_fn=loss_fn, optimiser=optimiser, device=device,

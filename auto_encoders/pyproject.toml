@@ -1,0 +1,15 @@
+[tool.steuptools_scm]
+
+[tool.black]
+line-length = 119
+
+[tool.flake8]
+max-line-length = 119
+exclude = ["venv", "tests", "protos_gen", "node_modules"]
+extend-select = 'B950'
+extend-ignore = ['E203', 'E501', 'E701']
+
+[tool.isort]
+line_length = 119
+profile = "black"
+skip_gitignore = "true"

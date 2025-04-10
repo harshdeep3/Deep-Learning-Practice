@@ -1,3 +1,9 @@
+"""_summary_
+
+Returns:
+    _type_: _description_
+"""
+
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -49,71 +55,36 @@ class AutoEncoder(nn.Module):
         return decoded
 
 
-class Encoder(nn.Module):
-    def __init__(self, image_size, channels, embedding_dim):
-        super(Encoder, self).__init__()
-
-        # variable to store the shape of the output tensor before flattening
-        # the features, it will be used in decoders input while reconstructing
-        self.shape_before_flattening = None
-
-        # encoder
+class AutoEncoder2(nn.Module):
+    def __init__(self, input_dim, output_dim):
+        super().__init__()
+        # N, 1, 28, 28
         self.encoder = nn.Sequential(
-            nn.Conv2d(channels, 32, kernel_size=3, stride=2, padding=1),
+            nn.Conv2d(1, 16, 3, stride=2, padding=1),  # -> N, 16, 14, 14
             nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
+            nn.Conv2d(16, 32, 3, stride=2, padding=1),  # -> N, 32, 7, 7
             nn.ReLU(),
-            nn.Conv2d(64, 128, kernel_size=3, stride=2, padding=1),
-            nn.ReLU(),
+            nn.Conv2d(32, 64, 7),  # -> N, 64, 1, 1
         )
-        # compute the flattened size after convolutions
-        flattened_size = (image_size // 8) * (image_size // 8) * 128
-        # define fully connected layer to create embeddings
-        self.fc = nn.Linear(flattened_size, embedding_dim)
 
-    def forward(self, x):
-        x = self.encoder(x)
-
-        # store the shape before flattening
-        self.shape_before_flattening = x.shape[1:]
-
-        # flatten the tensor
-        x = x.view(x.size(0), -1)
-        # apply fully connected layer to generate embeddings
-        x = self.fc(x)
-        return x
-
-
-class Decoder(nn.Module):
-    def __init__(self, embedding_dim, shape_before_flattening, channels):
-        super(Decoder, self).__init__()
-
-        # define fully connected layer to create embeddings
-        self.fc = nn.Linear(embedding_dim, np.prod(shape_before_flattening))
-
-        # store the shape before flattening
-        self.reshape_dim = shape_before_flattening
-
-        # encoder
+        # N , 64, 1, 1
         self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(128, 128, kernel_size=3, stride=2, padding=1, output_padding=1),
+            nn.ConvTranspose2d(64, 32, 7),  # -> N, 32, 7, 7
             nn.ReLU(),
-            nn.ConvTranspose2d(128, 64, kernel_size=3, stride=2, padding=1, output_padding=1),
+            nn.ConvTranspose2d(
+                32, 16, 3, stride=2, padding=1, output_padding=1
+            ),  # N, 16, 14, 14 (N,16,13,13 without output_padding)
             nn.ReLU(),
-            nn.ConvTranspose2d(64, 32, kernel_size=3, stride=2, padding=1, output_padding=1),
-            nn.ReLU(),
-            nn.Conv2d(32, channels, kernel_size=3, stride=1, padding=1),
-            torch.sigmoid(),
+            nn.ConvTranspose2d(16, 1, 3, stride=2, padding=1, output_padding=1),  # N, 1, 28, 28  (N,1,27,27)
+            nn.Sigmoid(),
         )
 
     def forward(self, x):
-        # apply fully connected layer to unflatten the embeddings
-        x = self.fc(x)
-        # reshape the tensor to match shape before flattening
-        x = x.view(x.size(0), *self.reshape_dim)
 
-        x = self.decoder(x)
-        return x
+        encoded = self.encoder(x)
+        decoded = self.decoder(encoded)
+
+        return decoded
 
 
 def get_dataloaders_mnist(train_transforms=None, test_transforms=None):
@@ -207,7 +178,8 @@ def training(images_size, train_loader, loss_fn, optimizer, n_epochs, encoder=No
                 # calculate the loss
                 loss = loss_fn(decoded, images)
             else:
-                images = images.reshape(-1, images_size)
+                # only for autocode1 which is the linear model
+                # images = images.reshape(-1, images_size)
                 output = autoencoder(images)
                 # calculate the loss
                 loss = loss_fn(output, images)
@@ -230,6 +202,39 @@ def training(images_size, train_loader, loss_fn, optimizer, n_epochs, encoder=No
     print(f"Best Training Loss: {best_val_loss}")
 
 
+def testing(test_loader, loss_fn, optimizer, encoder=None, decoder=None, autoencoder=None):
+
+    for batch_idx, (images, label) in tqdm(enumerate(test_loader), total=2):
+        # _ stands in for labels
+        images = images.to(device)
+        # clear the gradients of all optimized variables
+        optimizer.zero_grad()
+
+        if encoder is not None and decoder is not None:
+            # forward pass: encode the data and decode the encoded representation
+            encoded = encoder(images)
+            decoded = decoder(encoded)
+
+            # calculate the loss
+            loss = loss_fn(decoded, images)
+        else:
+            # only for autocode1 which is the linear model
+            # images = images.reshape(-1, images_size)
+            output = autoencoder(images)
+            # calculate the loss
+            loss = loss_fn(output, images)
+            print(f"loss -> {loss}")
+            output_imgs = output.cpu().detach().numpy()
+            output_imgs = np.squeeze(output_imgs)
+            plt.imshow(output_imgs)
+            plt.show()
+            images = images.cpu().detach().numpy()
+            images = np.squeeze(images)
+            plt.imshow(images)
+            plt.show()
+        break
+
+
 if __name__ == "__main__":
     device = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 
@@ -240,7 +245,7 @@ if __name__ == "__main__":
     show_images_as_grid(train_dataset)
 
     train_loader = DataLoader(dataset=train_dataset, batch_size=BATCH_SIZE, num_workers=2, shuffle=True)
-    test_loader = DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, num_workers=2, shuffle=False)
+    test_loader = DataLoader(dataset=test_dataset, batch_size=1, num_workers=2, shuffle=False)
 
     # understand the data
     images, labels = train_dataset[0]
@@ -253,7 +258,7 @@ if __name__ == "__main__":
         input_size = input_size * i
 
     # initialize the NN
-    autoencoder = AutoEncoder(input_dim=input_size, output_dim=3).to(device)
+    autoencoder = AutoEncoder2(input_dim=input_size, output_dim=3).to(device)
     # encoder = Encoder(channels=CHANNELS, image_size=IMAGE_SIZE, embedding_dim=EMBEDDING_DIM).to(device)
     # decoder = Decoder(
     #     channels=CHANNELS, shape_before_flattening=encoder.shape_before_flattening, embedding_dim=EMBEDDING_DIM
@@ -269,4 +274,14 @@ if __name__ == "__main__":
         loss_fn=loss_fn,
         optimizer=optimizer,
         n_epochs=EPOCHS,
+    )
+
+    # testing
+    show_images_as_grid(test_dataset)
+
+    testing(
+        autoencoder=autoencoder,
+        test_loader=test_loader,
+        loss_fn=loss_fn,
+        optimizer=optimizer,
     )
